@@ -21,6 +21,7 @@ function current(){return state.assignments.find(a=>a.id===activeId)}
 function status(id,workId){return state.records[workId]?.[id]||"none"}
 function mark(s){return s==="good"?'<i class="mark good"></i>':s==="rewrite"?'<i class="mark rewrite"></i>':s==="passed"?'<i class="mark passed">✓</i>':'<i class="mark none">—</i>'}
 let statusFilter=null;
+const filterHint=document.createElement('p');filterHint.className='filter-hint';filterHint.textContent='点击上方人数卡片筛选学生 · 再次点击恢复全部（筛选版 v2）';document.querySelector('#overview').after(filterHint);
 const statusLabels={good:'完成好',rewrite:'需要重默',passed:'重默通过',none:'未记录'};
 function filtered(q){q=(q||'').trim();return students.filter(x=>(!q||x.id.includes(q)||x.name.includes(q))&&(!statusFilter||status(x.id,activeId)===statusFilter))}
 const filterNotice=document.createElement('div');filterNotice.className='filter-notice';filterNotice.hidden=true;
@@ -28,7 +29,7 @@ document.querySelector('#overview').after(filterNotice);
 function renderFilterNotice(){filterNotice.hidden=!statusFilter;if(!statusFilter)return;const w=current();filterNotice.replaceChildren();const text=document.createElement('span');text.textContent='正在筛选：'+(w?w.date+' · '+w.content:'当前作业')+' — '+statusLabels[statusFilter];const clear=document.createElement('button');clear.type='button';clear.textContent='显示全部学生';clear.onclick=()=>{statusFilter=null;render()};filterNotice.append(text,clear)}
 $('#overview').onclick=e=>{const button=e.target.closest('[data-filter-status]');if(!button||!current())return;statusFilter=statusFilter===button.dataset.filterStatus?null:button.dataset.filterStatus;$('#desktopSearch').value='';$('#mobileSearch').value='';render()};
 const toolbar=document.createElement('section');
-const tableStyle=document.createElement('link');tableStyle.rel='stylesheet';tableStyle.href='table.css';document.head.append(tableStyle);
+const tableStyle=document.createElement('link');tableStyle.rel='stylesheet';tableStyle.href='table.css?v=20261009-filter2';document.head.append(tableStyle);
 toolbar.className='range-tools';
 toolbar.innerHTML='<div class="view-switch"><button id="tableView" type="button">区间表格</button><button id="cardView" type="button">快速登记</button></div><div class="range-inputs"><label>开始日期 <input type="date" id="rangeStart"></label><label>结束日期 <input type="date" id="rangeEnd"></label><button id="allDates" type="button">全部日期</button></div><div class="zoom-tools"><span>表格缩放</span><button id="zoomOut" aria-label="缩小表格">−</button><input id="tableZoom" aria-label="表格缩放比例" type="range" min="50" max="130" step="5"><button id="zoomIn" aria-label="放大表格">＋</button><output id="zoomValue"></output><button id="compactView">紧凑模式</button><button id="resetZoom">恢复默认</button></div><p id="rangeSummary" role="status"></p>';
 document.querySelector('.desktop-panel').before(toolbar);
@@ -94,6 +95,6 @@ $("#exportData").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)]
 $("#importData").onchange=e=>{const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{try{const v=JSON.parse(reader.result);if(!Array.isArray(v.assignments)||typeof v.records!=="object")throw 0;if(confirm("导入会覆盖当前浏览器中的所有作业记录，确定吗？")){state=v;activeId=state.assignments[0]?.id||null;save();render()}}catch{alert("文件格式不正确，未导入。")}};reader.readAsText(f);e.target.value=""};
 render();
 if(state.assignments.length&&!localStorage.getItem(KEY+'-before-cloud'))localStorage.setItem(KEY+'-before-cloud',JSON.stringify(state));
-note('正在连接在线数据库…');
+ note('正在连接在线数据库…');
 refresh();
 setInterval(()=>{if(pending)flush();else refresh()},3000);

@@ -30,3 +30,5 @@ body:not(.table-view) .desktop-panel{display:none}body:not(.table-view) .mobile-
 .filter-notice[hidden]{display:none}
 .filter-notice button{flex-shrink:0;border:1px solid #bd355e;border-radius:8px;background:white;color:#bd355e;padding:8px;font:inherit}
 @media(max-width:720px){.filter-notice{flex-wrap:wrap}}
+.filter-hint{color:#bd355e;font-size:13px;margin:0 0 14px}
+.stat span::after{content:' · 点击筛选';font-size:11px;color:#bd355e}

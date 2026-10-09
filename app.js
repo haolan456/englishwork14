@@ -21,6 +21,25 @@ function current(){return state.assignments.find(a=>a.id===activeId)}
 function status(id,workId){return state.records[workId]?.[id]||"none"}
 function mark(s){return s==="good"?'<i class="mark good"></i>':s==="rewrite"?'<i class="mark rewrite"></i>':s==="passed"?'<i class="mark passed">✓</i>':'<i class="mark none">—</i>'}
 function filtered(q){q=(q||"").trim();return q?students.filter(x=>x.id.includes(q)||x.name.includes(q)):students}
+const toolbar=document.createElement('section');
+const tableStyle=document.createElement('link');tableStyle.rel='stylesheet';tableStyle.href='table.css';document.head.append(tableStyle);
+toolbar.className='range-tools';
+toolbar.innerHTML='<div class="view-switch"><button id="tableView" type="button">区间表格</button><button id="cardView" type="button">快速登记</button></div><div class="range-inputs"><label>开始日期 <input type="date" id="rangeStart"></label><label>结束日期 <input type="date" id="rangeEnd"></label><button id="allDates" type="button">全部日期</button></div><div class="zoom-tools"><span>表格缩放</span><button id="zoomOut" aria-label="缩小表格">−</button><input id="tableZoom" aria-label="表格缩放比例" type="range" min="50" max="130" step="5"><button id="zoomIn" aria-label="放大表格">＋</button><output id="zoomValue"></output><button id="compactView">紧凑模式</button><button id="resetZoom">恢复默认</button></div><p id="rangeSummary" role="status"></p>';
+document.querySelector('.desktop-panel').before(toolbar);
+const emptyTable=document.createElement('p');emptyTable.id='emptyTable';
+document.querySelector('.table-scroll').after(emptyTable);
+function rangeWorks(){const start=$('#rangeStart').value,end=$('#rangeEnd').value;if(start&&end&&start>end)return [];return state.assignments.filter(a=>(!start||a.date>=start)&&(!end||a.date<=end)).slice().sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id))}
+function changeZoom(value){const z=Math.min(130,Math.max(50,Number(value)||100));$('#tableZoom').value=z;$('#zoomValue').textContent=z+'%';document.querySelector('.desktop-panel').style.setProperty('--table-scale',z/100);localStorage.setItem(KEY+'-zoom',z)}
+$('#tableZoom').oninput=e=>changeZoom(e.target.value);
+$('#zoomOut').onclick=()=>changeZoom(Number($('#tableZoom').value)-5);
+$('#zoomIn').onclick=()=>changeZoom(Number($('#tableZoom').value)+5);
+$('#compactView').onclick=()=>changeZoom(50);
+$('#resetZoom').onclick=()=>changeZoom(100);
+$('#rangeStart').onchange=renderTable;$('#rangeEnd').onchange=renderTable;
+$('#allDates').onclick=()=>{$('#rangeStart').value='';$('#rangeEnd').value='';renderTable()};
+function setView(table){document.body.classList.toggle('table-view',table);$('#tableView').setAttribute('aria-pressed',String(table));$('#cardView').setAttribute('aria-pressed',String(!table))}
+$('#tableView').onclick=()=>setView(true);$('#cardView').onclick=()=>setView(false);
+setView(true);changeZoom(localStorage.getItem(KEY+'-zoom')||100);
 function render(){
  if(!activeId&&state.assignments[0])activeId=state.assignments[0].id;
  const work=current(), select=$("#assignmentSelect");
@@ -33,8 +52,11 @@ function render(){
  renderTable();renderCards();
 }
 function renderTable(){
- const works=state.assignments, q=$("#desktopSearch").value, list=filtered(q);
- $("#matrixTable thead").innerHTML="<tr><th>学号</th><th>姓名</th>"+works.map(a=>'<th title="'+esc(a.content)+'">'+esc(a.content.slice(0,10))+'<span class="cell-date">'+fmt(a.date)+'</span></th>').join("")+"</tr>";
+ const works=rangeWorks(), q=$("#desktopSearch").value, list=filtered(q);
+ const invalid=$('#rangeStart').value&&$('#rangeEnd').value&&$('#rangeStart').value>$('#rangeEnd').value;
+ $('#rangeSummary').textContent=invalid?'开始日期不能晚于结束日期':'显示 '+list.length+' 位学生 · '+works.length+' 次默写（按日期排列）';
+ $('#emptyTable').textContent=invalid?'请调整日期范围。':!list.length?'没有找到匹配的学生。':!works.length?'所选日期范围内没有默写记录。':'';
+ $("#matrixTable thead").innerHTML="<tr><th>学号</th><th>姓名</th>"+works.map(a=>'<th class="work-heading"><span class="work-date">'+esc(a.date)+'</span><span class="work-content">'+esc(a.content)+'</span></th>').join("")+"</tr>";
  $("#matrixTable tbody").innerHTML=list.map(s=>"<tr><td>"+s.id+"</td><td>"+s.name+"</td>"+works.map(a=>'<td class="status-cell"><button data-student="'+s.id+'" data-work="'+a.id+'" title="修改状态">'+mark(status(s.id,a.id))+"</button></td>").join("")+"</tr>").join("");
 }
 function renderCards(){
@@ -56,7 +78,8 @@ $("#addAssignment").onclick=()=>openAssignment();$("#editAssignment").onclick=()
 $("#deleteAssignment").onclick=()=>{const w=current();if(w&&confirm("删除“"+w.content+"”及其所有记录吗？")){state.assignments=state.assignments.filter(x=>x.id!==w.id);delete state.records[w.id];activeId=state.assignments[0]?.id||null;save();render()}};
 $("#assignmentForm").addEventListener("submit",writeAssignment);
 $("#assignmentSelect").onchange=e=>{activeId=e.target.value;render()};
-$("#desktopSearch").oninput=renderTable;$("#mobileSearch").oninput=renderCards;
+function searchStudents(e){const query=e.target.value;$('#desktopSearch').value=query;$('#mobileSearch').value=query;renderTable();renderCards()}
+$("#desktopSearch").oninput=searchStudents;$("#mobileSearch").oninput=searchStudents;
 $("#matrixTable").onclick=e=>{const b=e.target.closest("button[data-student]");if(!b)return;statusTarget={work:b.dataset.work,student:b.dataset.student};const s=students.find(x=>x.id===statusTarget.student),w=state.assignments.find(x=>x.id===statusTarget.work);$("#statusStudent").textContent=s.name+" · "+s.id;$("#statusWork").textContent=fmt(w.date)+" · "+w.content;$("#statusDialog").showModal()};
 $("#statusDialog").onclick=e=>{const b=e.target.closest("[data-status]");if(b&&statusTarget){setStatus(statusTarget.work,statusTarget.student,b.dataset.status);$("#statusDialog").close()}};
 $("#studentCards").onclick=e=>{const b=e.target.closest("[data-quick]"),w=current();if(b&&w)setStatus(w.id,b.dataset.student,b.dataset.quick)};

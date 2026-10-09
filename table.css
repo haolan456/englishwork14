@@ -1,0 +1,23 @@
+.range-tools{background:#fffdf9;border:1px solid #e7e9e6;border-radius:16px;padding:16px;margin-bottom:18px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.range-tools button{background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;min-height:36px}
+.range-tools button[aria-pressed=true]{background:#ffe1e8;border-color:#bd355e}
+.range-inputs,.zoom-tools,.view-switch{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.range-inputs input{font:inherit;padding:7px;border:1px solid #ddd;border-radius:8px}
+.zoom-tools input{width:120px;accent-color:#bd355e}
+#rangeSummary{width:100%;margin:0;color:#77817d;font-size:13px}
+.desktop-panel{--table-scale:1}
+.table-scroll{max-height:72vh;max-height:72dvh}
+#matrixTable{font-size:calc(14px * var(--table-scale));table-layout:fixed;min-width:0}
+#matrixTable th,#matrixTable td{padding:calc(4px * var(--table-scale)) calc(7px * var(--table-scale));height:calc(34px * var(--table-scale))}
+#matrixTable th:first-child,#matrixTable td:first-child{width:calc(90px * var(--table-scale));min-width:calc(90px * var(--table-scale));max-width:calc(90px * var(--table-scale));left:0}
+#matrixTable th:nth-child(2),#matrixTable td:nth-child(2){width:calc(80px * var(--table-scale));min-width:calc(80px * var(--table-scale));max-width:calc(80px * var(--table-scale));left:calc(90px * var(--table-scale));font-weight:600}
+#matrixTable .work-heading{width:calc(160px * var(--table-scale));min-width:calc(160px * var(--table-scale));max-width:calc(160px * var(--table-scale));font-size:inherit;vertical-align:top}
+.work-date,.work-content{display:block}.work-date{color:#bd355e;margin-bottom:4px}.work-content{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+#matrixTable .status-cell{padding:0}
+#matrixTable .status-cell button{height:calc(32px * var(--table-scale));width:100%;border-radius:0}
+#matrixTable .mark{width:calc(20px * var(--table-scale));height:calc(20px * var(--table-scale));font-size:calc(15px * var(--table-scale))}
+#matrixTable .mark.rewrite,#matrixTable .mark.passed{border-width:calc(2px * var(--table-scale))}
+#matrixTable tbody tr:hover td{background:#fff1f4}
+#matrixTable button:focus-visible{outline:2px solid #bd355e;outline-offset:-2px}
+body:not(.table-view) .desktop-panel{display:none}body:not(.table-view) .mobile-panel{display:block}
+@media(max-width:720px){body.table-view .desktop-panel{display:block;padding:12px}body.table-view .mobile-panel{display:none}.range-tools{padding:12px}.range-inputs label{font-size:13px}.range-inputs input{max-width:145px}.table-scroll{max-height:72dvh}.panel-heading{flex-wrap:wrap}.zoom-tools{gap:6px}}

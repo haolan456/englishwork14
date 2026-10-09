@@ -20,7 +20,13 @@ function fmt(d){if(!d)return"";const [y,m,day]=d.split("-");return m+"月"+day+"
 function current(){return state.assignments.find(a=>a.id===activeId)}
 function status(id,workId){return state.records[workId]?.[id]||"none"}
 function mark(s){return s==="good"?'<i class="mark good"></i>':s==="rewrite"?'<i class="mark rewrite"></i>':s==="passed"?'<i class="mark passed">✓</i>':'<i class="mark none">—</i>'}
-function filtered(q){q=(q||"").trim();return q?students.filter(x=>x.id.includes(q)||x.name.includes(q)):students}
+let statusFilter=null;
+const statusLabels={good:'完成好',rewrite:'需要重默',passed:'重默通过',none:'未记录'};
+function filtered(q){q=(q||'').trim();return students.filter(x=>(!q||x.id.includes(q)||x.name.includes(q))&&(!statusFilter||status(x.id,activeId)===statusFilter))}
+const filterNotice=document.createElement('div');filterNotice.className='filter-notice';filterNotice.hidden=true;
+document.querySelector('#overview').after(filterNotice);
+function renderFilterNotice(){filterNotice.hidden=!statusFilter;if(!statusFilter)return;const w=current();filterNotice.replaceChildren();const text=document.createElement('span');text.textContent='正在筛选：'+(w?w.date+' · '+w.content:'当前作业')+' — '+statusLabels[statusFilter];const clear=document.createElement('button');clear.type='button';clear.textContent='显示全部学生';clear.onclick=()=>{statusFilter=null;render()};filterNotice.append(text,clear)}
+$('#overview').onclick=e=>{const button=e.target.closest('[data-filter-status]');if(!button||!current())return;statusFilter=statusFilter===button.dataset.filterStatus?null:button.dataset.filterStatus;$('#desktopSearch').value='';$('#mobileSearch').value='';render()};
 const toolbar=document.createElement('section');
 const tableStyle=document.createElement('link');tableStyle.rel='stylesheet';tableStyle.href='table.css';document.head.append(tableStyle);
 toolbar.className='range-tools';
@@ -48,7 +54,8 @@ function render(){
  $("#assignmentMeta").textContent=work?work.date+" · 共 "+students.length+" 名学生":"请先点击“新增作业”";
  const records=work?students.map(s=>status(s.id,work.id)):[];
  const counts=["good","rewrite","passed"].map(x=>records.filter(y=>y===x).length);
- $("#overview").innerHTML=[["完成好",counts[0]],["需要重默",counts[1]],["重默通过",counts[2]],["未记录",work?students.length-counts.reduce((a,b)=>a+b,0):students.length]].map(x=>'<div class="stat"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>').join("");
+ $("#overview").innerHTML=[['good',counts[0]],['rewrite',counts[1]],['passed',counts[2]],['none',work?students.length-counts.reduce((a,b)=>a+b,0):students.length]].map(([key,count])=>'<button type="button" class="stat" data-filter-status="'+key+'" aria-pressed="'+(statusFilter===key)+'" '+(!work?'disabled':'')+' title="点击筛选当前作业的'+statusLabels[key]+'学生"><b>'+count+'</b><span>'+statusLabels[key]+'</span></button>').join('');
+ renderFilterNotice();
  renderTable();renderCards();
 }
 function renderTable(){
@@ -77,7 +84,7 @@ function setStatus(workId,studentId,value){state.records[workId]??={};if(value==
 $("#addAssignment").onclick=()=>openAssignment();$("#editAssignment").onclick=()=>current()&&openAssignment(true);
 $("#deleteAssignment").onclick=()=>{const w=current();if(w&&confirm("删除“"+w.content+"”及其所有记录吗？")){state.assignments=state.assignments.filter(x=>x.id!==w.id);delete state.records[w.id];activeId=state.assignments[0]?.id||null;save();render()}};
 $("#assignmentForm").addEventListener("submit",writeAssignment);
-$("#assignmentSelect").onchange=e=>{activeId=e.target.value;render()};
+$("#assignmentSelect").onchange=e=>{activeId=e.target.value;statusFilter=null;render()};
 function searchStudents(e){const query=e.target.value;$('#desktopSearch').value=query;$('#mobileSearch').value=query;renderTable();renderCards()}
 $("#desktopSearch").oninput=searchStudents;$("#mobileSearch").oninput=searchStudents;
 $("#matrixTable").onclick=e=>{const b=e.target.closest("button[data-student]");if(!b)return;statusTarget={work:b.dataset.work,student:b.dataset.student};const s=students.find(x=>x.id===statusTarget.student),w=state.assignments.find(x=>x.id===statusTarget.work);$("#statusStudent").textContent=s.name+" · "+s.id;$("#statusWork").textContent=fmt(w.date)+" · "+w.content;$("#statusDialog").showModal()};

@@ -21,3 +21,12 @@
 #matrixTable button:focus-visible{outline:2px solid #bd355e;outline-offset:-2px}
 body:not(.table-view) .desktop-panel{display:none}body:not(.table-view) .mobile-panel{display:block}
 @media(max-width:720px){body.table-view .desktop-panel{display:block;padding:12px}body.table-view .mobile-panel{display:none}.range-tools{padding:12px}.range-inputs label{font-size:13px}.range-inputs input{max-width:145px}.table-scroll{max-height:72dvh}.panel-heading{flex-wrap:wrap}.zoom-tools{gap:6px}}
+.stat{text-align:left;color:#26302d;font:inherit;cursor:pointer}
+.stat:hover{background:#fff4f6}
+.stat[aria-pressed=true]{border-color:#bd355e;background:#ffe1e8;box-shadow:0 0 0 1px #bd355e}
+.stat:disabled{cursor:default;opacity:.65}
+.stat:focus-visible{outline:2px solid #bd355e;outline-offset:3px}
+.filter-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;margin:0 0 16px;background:#ffe1e8;border-radius:10px;font-size:14px}
+.filter-notice[hidden]{display:none}
+.filter-notice button{flex-shrink:0;border:1px solid #bd355e;border-radius:8px;background:white;color:#bd355e;padding:8px;font:inherit}
+@media(max-width:720px){.filter-notice{flex-wrap:wrap}}

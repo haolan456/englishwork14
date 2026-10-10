@@ -29,21 +29,28 @@ document.querySelector('#overview').after(filterNotice);
 function renderFilterNotice(){filterNotice.hidden=!statusFilter;if(!statusFilter)return;const w=current();filterNotice.replaceChildren();const text=document.createElement('span');text.textContent='正在筛选：'+(w?w.date+' · '+w.content:'当前作业')+' — '+statusLabels[statusFilter];const clear=document.createElement('button');clear.type='button';clear.textContent='显示全部学生';clear.onclick=()=>{statusFilter=null;render()};filterNotice.append(text,clear)}
 $('#overview').onclick=e=>{const button=e.target.closest('[data-filter-status]');if(!button||!current())return;statusFilter=statusFilter===button.dataset.filterStatus?null:button.dataset.filterStatus;$('#desktopSearch').value='';$('#mobileSearch').value='';render()};
 const toolbar=document.createElement('section');
+const exportButton=document.createElement('button');exportButton.textContent='导出 Excel';exportButton.type='button';document.querySelector('.tool-actions').prepend(exportButton);
+const exportDialog=document.createElement('dialog');exportDialog.innerHTML='<form method="dialog"><div class="dialog-title"><h2>导出 Excel 记录</h2><button value="cancel" formnovalidate class="close">×</button></div><label>开始日期<input type="date" id="exportStart"></label><label>结束日期<input type="date" id="exportEnd"></label><p>导出选定日期内全班 56 人的记录，不受姓名或状态筛选影响。留空表示不限日期。</p><div class="dialog-actions"><button value="cancel" formnovalidate>取消</button><button value="export">下载 Excel</button></div></form>';document.body.append(exportDialog);
+exportButton.onclick=()=>{$('#exportStart').value=$('#rangeStart').value;$('#exportEnd').value=$('#rangeEnd').value;exportDialog.showModal()};
+exportDialog.querySelector('form').onsubmit=async e=>{if(e.submitter?.value!=='export')return;e.preventDefault();const start=$('#exportStart').value,end=$('#exportEnd').value;if(start&&end&&start>end){alert('开始日期不能晚于结束日期');return}const works=dateWorks(start,end);if(!works.length){alert('该时间范围没有作业记录');return}const button=e.submitter;button.disabled=true;try{const {makeWorkbook}=await import('./excel.js?v=20261010');const rows=[['学号','姓名',...works.map(w=>w.date+'\n'+w.content)],...students.map(s=>[s.id,s.name,...works.map(w=>statusLabels[status(s.id,w.id)])])];const url=URL.createObjectURL(makeWorkbook(rows)),a=document.createElement('a');a.href=url;a.download='14班默写记录_'+works[0].date+'_至_'+works[works.length-1].date+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);exportDialog.close()}catch(err){alert('导出失败，请确认 excel.js 已上传，再重试。')}finally{button.disabled=false}};
+$('#exportData').textContent='备份 JSON';
 const tableStyle=document.createElement('link');tableStyle.rel='stylesheet';tableStyle.href='table.css?v=20261009-filter2';document.head.append(tableStyle);
 toolbar.className='range-tools';
 toolbar.innerHTML='<div class="view-switch"><button id="tableView" type="button">区间表格</button><button id="cardView" type="button">快速登记</button></div><div class="range-inputs"><label>开始日期 <input type="date" id="rangeStart"></label><label>结束日期 <input type="date" id="rangeEnd"></label><button id="allDates" type="button">全部日期</button></div><div class="zoom-tools"><span>表格缩放</span><button id="zoomOut" aria-label="缩小表格">−</button><input id="tableZoom" aria-label="表格缩放比例" type="range" min="50" max="130" step="5"><button id="zoomIn" aria-label="放大表格">＋</button><output id="zoomValue"></output><button id="compactView">紧凑模式</button><button id="resetZoom">恢复默认</button></div><p id="rangeSummary" role="status"></p>';
 document.querySelector('.desktop-panel').before(toolbar);
 const emptyTable=document.createElement('p');emptyTable.id='emptyTable';
 document.querySelector('.table-scroll').after(emptyTable);
-function rangeWorks(){const start=$('#rangeStart').value,end=$('#rangeEnd').value;if(start&&end&&start>end)return [];return state.assignments.filter(a=>(!start||a.date>=start)&&(!end||a.date<=end)).slice().sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id))}
+function rangeWorks(){if(statusFilter)return current()?[current()]:[];return dateWorks($('#rangeStart').value,$('#rangeEnd').value)}
+function dateWorks(start,end){if(start&&end&&start>end)return [];return state.assignments.filter(a=>(!start||a.date>=start)&&(!end||a.date<=end)).slice().sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id))}
 function changeZoom(value){const z=Math.min(130,Math.max(50,Number(value)||100));$('#tableZoom').value=z;$('#zoomValue').textContent=z+'%';document.querySelector('.desktop-panel').style.setProperty('--table-scale',z/100);localStorage.setItem(KEY+'-zoom',z)}
 $('#tableZoom').oninput=e=>changeZoom(e.target.value);
 $('#zoomOut').onclick=()=>changeZoom(Number($('#tableZoom').value)-5);
 $('#zoomIn').onclick=()=>changeZoom(Number($('#tableZoom').value)+5);
 $('#compactView').onclick=()=>changeZoom(50);
 $('#resetZoom').onclick=()=>changeZoom(100);
-$('#rangeStart').onchange=renderTable;$('#rangeEnd').onchange=renderTable;
-$('#allDates').onclick=()=>{$('#rangeStart').value='';$('#rangeEnd').value='';renderTable()};
+function changeRange(){statusFilter=null;render()}
+$('#rangeStart').onchange=changeRange;$('#rangeEnd').onchange=changeRange;
+$('#allDates').onclick=()=>{$('#rangeStart').value='';$('#rangeEnd').value='';changeRange()};
 function setView(table){document.body.classList.toggle('table-view',table);$('#tableView').setAttribute('aria-pressed',String(table));$('#cardView').setAttribute('aria-pressed',String(!table))}
 $('#tableView').onclick=()=>setView(true);$('#cardView').onclick=()=>setView(false);
 setView(true);changeZoom(localStorage.getItem(KEY+'-zoom')||100);
@@ -61,7 +68,7 @@ function render(){
 }
 function renderTable(){
  const works=rangeWorks(), q=$("#desktopSearch").value, list=filtered(q);
- const invalid=$('#rangeStart').value&&$('#rangeEnd').value&&$('#rangeStart').value>$('#rangeEnd').value;
+ const invalid=!statusFilter&&$('#rangeStart').value&&$('#rangeEnd').value&&$('#rangeStart').value>$('#rangeEnd').value;
  $('#rangeSummary').textContent=invalid?'开始日期不能晚于结束日期':'显示 '+list.length+' 位学生 · '+works.length+' 次默写（按日期排列）';
  $('#emptyTable').textContent=invalid?'请调整日期范围。':!list.length?'没有找到匹配的学生。':!works.length?'所选日期范围内没有默写记录。':'';
  $("#matrixTable thead").innerHTML="<tr><th>学号</th><th>姓名</th>"+works.map(a=>'<th class="work-heading"><span class="work-date">'+esc(a.date)+'</span><span class="work-content">'+esc(a.content)+'</span></th>').join("")+"</tr>";
